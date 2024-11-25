@@ -10,7 +10,7 @@ export const handleDeleteUser = async (
   req: Request<MongoIdSchemaType, unknown>,
   res: Response,
 ) => {
-  await deleteUser({ id: req.params.id });
+  await deleteUser(Number(req.params.id));
 
   return successResponse(res, 'User has been deleted');
 };
@@ -24,7 +24,7 @@ export const handleCreateUser = async (
   const user = await createUser({
     ...data,
     password: generateRandomPassword(),
-    role: 'DEFAULT_USER',
+    role: 'USER',
   });
 
   return successResponse(
@@ -46,7 +46,7 @@ export const handleCreateSuperAdmin = async (
     name: 'Super Admin',
     username: 'super_admin',
     password: password,
-    role: 'SUPER_ADMIN',
+    role: 'ADMIN',
     phoneNo: '123456789',
   });
 
@@ -63,9 +63,7 @@ export const handleGetUsers = async (
   res: Response,
 ) => {
   const { results, paginatorInfo } = await getUsers(
-    {
-      id: req.user.sub,
-    },
+    Number(req.user.sub),
     req.query,
   );
 

@@ -1,13 +1,10 @@
 import z from 'zod';
 import validator from 'validator';
 import { passwordValidationSchema } from '../../common/common.schema';
-import { baseCreateUser } from '../user/user.schema';
+import { baseCreateUser, loginUserSchema } from '../user/user.schema';
 
 export const resetPasswordSchema = z.object({
-  userId: z
-    .string({ required_error: 'userId is required' })
-    .min(1)
-    .refine((value) => validator.isMongoId(value), 'userId must be valid'),
+  userId: z.number({ required_error: 'userId is required' }).min(1),
   code: z
     .string({ required_error: 'code is required' })
     .min(4)
@@ -43,7 +40,7 @@ export const registerUserByEmailSchema = z
     return true;
   }, 'Password and confirm password must be same');
 
-export const loginUserByEmailSchema = baseCreateUser;
+export const loginUserByEmailSchema = loginUserSchema;
 
 export type RegisterUserByEmailSchemaType = z.infer<
   typeof registerUserByEmailSchema

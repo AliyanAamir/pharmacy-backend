@@ -5,6 +5,7 @@ This document outlines the email service implementation using React Email for te
 ## Overview
 
 The email service provides a robust, type-safe way to send transactional emails using:
+
 - [React Email](https://react.email/) for building and maintaining email templates
 - [Mailgun](https://www.mailgun.com/) for reliable email delivery
 - TypeScript for type safety and better developer experience
@@ -45,7 +46,7 @@ import { sendResetPasswordEmail } from '../email/email.service';
 await sendResetPasswordEmail({
   email: 'user@example.com',
   userName: 'John Doe',
-  resetLink: 'https://yourdomain.com/reset-password?token=xyz'
+  resetLink: 'https://yourdomain.com/reset-password?token=xyz',
 });
 ```
 
@@ -57,10 +58,18 @@ await sendResetPasswordEmail({
 4. Add a new method in `EmailService` class to send the email
 
 Example:
+
 ```typescript
 // src/email/templates/WelcomeEmail.tsx
 import * as React from 'react';
-import { Button, Container, Head, Html, Preview, Text } from '@react-email/components';
+import {
+  Button,
+  Container,
+  Head,
+  Html,
+  Preview,
+  Text,
+} from '@react-email/components';
 
 interface WelcomeEmailProps {
   userName: string;
@@ -72,9 +81,7 @@ export const WelcomeEmail = ({ userName }: WelcomeEmailProps) => (
     <Preview>Welcome to our platform</Preview>
     <Container>
       <Text>Welcome {userName}!</Text>
-      <Button href="https://yourdomain.com/getting-started">
-        Get Started
-      </Button>
+      <Button href="https://yourdomain.com/getting-started">Get Started</Button>
     </Container>
   </Html>
 );

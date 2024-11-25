@@ -1,8 +1,9 @@
 import { render } from '@react-email/render';
 import ResetPasswordEmail from './templates/ResetPassword';
-import mailgunClient from '../lib/mailgun.server';
+import brevoTransport from '../lib/brevo.server';
 import config from '../config/config.service';
 import logger from '../lib/logger.service';
+import Mail from 'nodemailer/lib/mailer';
 
 export type SendResetPasswordTypePayload = {
   email: string;
@@ -11,7 +12,10 @@ export type SendResetPasswordTypePayload = {
 };
 
 class EmailError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+  ) {
     super(message);
     this.name = 'EmailError';
   }
@@ -28,18 +32,17 @@ export class EmailService {
     html: string;
   }) {
     try {
-      const messageData = {
-        from: config.MAILGUN_FROM_EMAIL,
+      const messageData: Mail.Options = {
+        from: config.BREVO_USER,
         to,
         subject,
         html,
       };
 
-      const result = await mailgunClient.messages.create(config.MAILGUN_DOMAIN, messageData);
-      
+      const result = await brevoTransport.sendMail(messageData);
+
       logger.info({
         msg: 'Email sent successfully',
-        id: result.id,
         to,
         subject,
       });
@@ -52,7 +55,7 @@ export class EmailService {
         to,
         subject,
       });
-      
+
       throw new EmailError('Failed to send email', error);
     }
   }
@@ -66,7 +69,7 @@ export class EmailService {
         ResetPasswordEmail({
           resetLink,
           userName,
-        })
+        }),
       );
 
       // Send the email with the rendered HTML
@@ -81,11 +84,12 @@ export class EmailService {
         error,
         email,
       });
-      
+
       throw new EmailError('Failed to send reset password email', error);
     }
   }
 }
 
 // Export the sendResetPasswordEmail function to maintain backward compatibility
-export const sendResetPasswordEmail = EmailService.sendResetPasswordEmail.bind(EmailService);
+export const sendResetPasswordEmail =
+  EmailService.sendResetPasswordEmail.bind(EmailService);

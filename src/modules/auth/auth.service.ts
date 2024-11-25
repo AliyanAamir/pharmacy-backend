@@ -1,4 +1,5 @@
-import { ROLE_ENUM, RoleType, SOCIAL_ACCOUNT_ENUM } from '../../enums';
+import { Prisma, Role, SocialAccountType, User } from '@prisma/client';
+
 import { GoogleCallbackQuery } from '../../types';
 import {
   compareHash,
@@ -9,8 +10,8 @@ import {
   signToken,
 } from '../../utils/auth.utils';
 import { generateRandomNumbers } from '../../utils/common.utils';
-import { UserType } from '../user/user.dto';
 import {
+  checkIfUserExistByEmail,
   createUser,
   getUserByEmail,
   getUserById,
@@ -25,7 +26,7 @@ import {
 } from './auth.schema';
 
 export const resetPassword = async (payload: ResetPasswordSchemaType) => {
-  const user = await getUserById(payload.userId);
+  const user: User = await getUserById(Number(payload.userId));
 
   if (!user || user.passwordResetCode !== payload.code) {
     throw new Error('token is not valid or expired, please try again');
@@ -37,7 +38,7 @@ export const resetPassword = async (payload: ResetPasswordSchemaType) => {
 
   const hashedPassword = await hashPassword(payload.password);
 
-  await updateUser(payload.userId, {
+  await updateUser(Number(payload.userId), {
     password: hashedPassword,
     passwordResetCode: null,
   });
@@ -45,7 +46,7 @@ export const resetPassword = async (payload: ResetPasswordSchemaType) => {
 
 export const forgetPassword = async (
   payload: ForgetPasswordSchemaType,
-): Promise<UserType> => {
+): Promise<User> => {
   const user = await getUserByEmail(payload.email);
 
   if (!user) {
@@ -54,16 +55,16 @@ export const forgetPassword = async (
 
   const code = generateRandomNumbers(4);
 
-  await updateUser(user._id, { passwordResetCode: code });
+  await updateUser(user.id, { passwordResetCode: code });
 
   return user;
 };
 
 export const changePassword = async (
-  userId: string,
+  userId: number,
   payload: ChangePasswordSchemaType,
 ): Promise<void> => {
-  const user = await getUserById(userId, '+password');
+  const user = await getUserById(userId);
 
   if (!user || !user.password) {
     throw new Error('User is not found');
@@ -80,13 +81,13 @@ export const changePassword = async (
 
   const hashedPassword = await hashPassword(payload.newPassword);
 
-  await updateUser(userId, { password: hashedPassword });
+  await updateUser(Number(userId), { password: hashedPassword });
 };
 
 export const registerUserByEmail = async (
   payload: RegisterUserByEmailSchemaType,
-): Promise<UserType> => {
-  const userExistByEmail = await getUserByEmail(payload.email);
+): Promise<User> => {
+  const userExistByEmail = await checkIfUserExistByEmail(payload.email);
 
   if (userExistByEmail) {
     throw new Error('Account already exist with same email address');
@@ -94,7 +95,7 @@ export const registerUserByEmail = async (
 
   const { confirmPassword, ...rest } = payload;
 
-  const user = await createUser({ ...rest, role: 'DEFAULT_USER' }, false);
+  const user = await createUser({ ...rest, role: Role.USER }, false);
 
   return user;
 };
@@ -102,17 +103,17 @@ export const registerUserByEmail = async (
 export const loginUserByEmail = async (
   payload: LoginUserByEmailSchemaType,
 ): Promise<string> => {
-  const user = await getUserByEmail(payload.email, '+password');
+  const user = await getUserByEmail(payload.email);
 
   if (!user || !(await compareHash(String(user.password), payload.password))) {
     throw new Error('Invalid email or password');
   }
 
   const jwtPayload: JwtPayload = {
-    sub: String(user.id),
+    sub: user.id,
     email: user?.email,
     phoneNo: user?.phoneNo,
-    role: String(user.role) as RoleType,
+    role: user.role,
     username: user.username,
   };
 
@@ -123,7 +124,7 @@ export const loginUserByEmail = async (
 
 export const googleLogin = async (
   payload: GoogleCallbackQuery,
-): Promise<UserType> => {
+): Promise<Prisma.UserGetPayload<{ include: { socialAccount: true } }>> => {
   const { code, error } = payload;
 
   if (error) {
@@ -148,32 +149,36 @@ export const googleLogin = async (
       email,
       username: name,
       avatar: picture,
-      role: ROLE_ENUM.DEFAULT_USER,
+      role: Role.USER,
       password: generateRandomNumbers(4),
-      socialAccount: [
-        {
-          refreshToken: refresh_token,
-          tokenExpiry: new Date(Date.now() + expires_in * 1000),
-          accountType: SOCIAL_ACCOUNT_ENUM.GOOGLE,
-          accessToken: access_token,
-          accountID: id,
-        },
-      ],
+      socialAccount: {
+        create: [
+          {
+            refreshToken: refresh_token,
+            tokenExpiry: new Date(Date.now() + expires_in * 1000),
+            accountType: SocialAccountType.GOOGLE,
+            accessToken: access_token,
+            accountID: id,
+          },
+        ],
+      },
     });
 
     return newUser;
   }
 
-  const updatedUser = await updateUser(user._id, {
-    socialAccount: [
-      {
-        refreshToken: refresh_token,
-        tokenExpiry: new Date(Date.now() + expires_in * 1000),
-        accountType: SOCIAL_ACCOUNT_ENUM.GOOGLE,
-        accessToken: access_token,
-        accountID: id,
-      },
-    ],
+  const updatedUser = await updateUser(user.id, {
+    socialAccount: {
+      create: [
+        {
+          refreshToken: refresh_token,
+          tokenExpiry: new Date(Date.now() + expires_in * 1000),
+          accountType: SocialAccountType.GOOGLE,
+          accessToken: access_token,
+          accountID: id,
+        },
+      ],
+    },
   });
 
   return updatedUser;

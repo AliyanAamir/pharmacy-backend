@@ -8,13 +8,15 @@ import {
   handleGoogleLogin,
   handleLoginByEmail,
   handleLogout,
-  handleResetPassword
+  handleRegisterByEmail,
+  handleResetPassword,
 } from './auth.controller';
 import {
   changePasswordSchema,
   forgetPasswordSchema,
   loginUserByEmailSchema,
-  resetPasswordSchema
+  registerUserByEmailSchema,
+  resetPasswordSchema,
 } from './auth.schema';
 
 export const AUTH_ROUTER_ROOT = '/auth';
@@ -25,6 +27,11 @@ authRouter.post(
   '/login/email',
   { requestType: { body: loginUserByEmailSchema } },
   handleLoginByEmail,
+);
+authRouter.post(
+  '/register/email',
+  { requestType: { body: registerUserByEmailSchema } },
+  handleRegisterByEmail,
 );
 
 authRouter.post('/logout', {}, handleLogout);

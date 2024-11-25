@@ -1,17 +1,12 @@
 import z from 'zod';
 import { definePaginatedResponse } from '../../common/common.utils';
-import {
-  ROLE_ENUM,
-  RoleType,
-  SOCIAL_ACCOUNT_ENUM,
-  SocialAccountType,
-} from '../../enums';
+import { SocialAccount, Role, SocialAccountType } from '@prisma/client';
 
 export const SocialAccountTypeZ = z.enum(
-  Object.keys(SOCIAL_ACCOUNT_ENUM) as [SocialAccountType],
+  Object.keys(SocialAccountType) as [SocialAccountType],
 );
 
-export const RoleTypeZ = z.enum(Object.keys(ROLE_ENUM) as [RoleType]);
+export const RoleTypeZ = z.enum(Object.keys(Role) as [Role]);
 
 export const socialAccountInfoSchema = z.object({
   accountType: SocialAccountTypeZ,

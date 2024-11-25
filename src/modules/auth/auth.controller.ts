@@ -35,14 +35,14 @@ export const handleForgetPassword = async (
 ) => {
   const user = await forgetPassword(req.body);
 
-  return successResponse(res, 'Code has been sent', { userId: user._id });
+  return successResponse(res, 'Code has been sent', { userId: user.id });
 };
 
 export const handleChangePassword = async (
   req: Request<unknown, unknown, ChangePasswordSchemaType>,
   res: Response,
 ) => {
-  await changePassword((req.user as JwtPayload).sub, req.body);
+  await changePassword(Number((req.user as JwtPayload).sub), req.body);
 
   return successResponse(res, 'Password successfully changed');
 };
@@ -73,6 +73,15 @@ export const handleLoginByEmail = async (
   return successResponse(res, 'Login successful', { token: token });
 };
 
+export const handleRegisterByEmail = async (
+  req: Request<unknown, unknown, RegisterUserByEmailSchemaType>,
+  res: Response,
+) => {
+  const user = await registerUserByEmail(req.body);
+
+  return successResponse(res, 'User has been registered', user);
+};
+
 export const handleGetCurrentUser = async (req: Request, res: Response) => {
   const user = req.user;
 
@@ -81,11 +90,10 @@ export const handleGetCurrentUser = async (req: Request, res: Response) => {
 export const handleGoogleLogin = async (_: Request, res: Response) => {
   if (!config.GOOGLE_CLIENT_ID || !config.GOOGLE_REDIRECT_URI) {
     throw new Error('Google credentials are not set');
-  } 
+  }
 
   const googleAuthURL = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${config.GOOGLE_CLIENT_ID}&redirect_uri=${config.GOOGLE_REDIRECT_URI}&scope=email profile`;
 
-  
   res.redirect(googleAuthURL);
 };
 export const handleGoogleCallback = async (

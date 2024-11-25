@@ -1,98 +1,106 @@
-import { FilterQuery } from 'mongoose';
+import { Prisma, SocialAccount, User } from '@prisma/client';
 import { hashPassword } from '../../utils/auth.utils';
 import { getPaginator } from '../../utils/getPaginator';
-import { UserModelType, UserType } from './user.dto';
-import User, { IUserDocument } from './user.model';
+
 import { GetUsersSchemaType } from './user.schema';
-import { MongoIdSchemaType } from '../../common/common.schema';
+import db from '../../lib/database';
 
 export const updateUser = async (
-  userId: string,
-  payload: Partial<UserType>,
-): Promise<UserType> => {
-  const user = await User.findOneAndUpdate(
-    {
-      _id: userId,
-    },
-    { $set: { ...payload } },
-    {
-      new: true,
-    },
-  );
+  userId: number,
+  payload: Prisma.UserUpdateInput,
+): Promise<Prisma.UserGetPayload<{ include: { socialAccount: true } }>> => {
+  const user = await db.user.update({
+    where: { id: userId },
+    data: payload,
+    include: { socialAccount: true },
+  });
 
   if (!user) throw new Error('User not found');
 
-  return user.toObject();
+  return user;
 };
 
-export const getUserById = async (userId: string, select?: string) => {
-  const user = await User.findOne({
-    _id: userId,
-  }).select(select ?? '');
+export const getUserById = async (
+  userId: number,
+): Promise<Prisma.UserGetPayload<{ include: { socialAccount: true } }>> => {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { socialAccount: true },
+  });
 
   if (!user) {
     throw new Error('User not found');
   }
 
-  return user.toObject();
+  return user;
+};
+
+export const checkIfUserExistByEmail = async (
+  email: string,
+): Promise<boolean> => {
+  const user = await db.user.findUnique({ where: { email } });
+
+  return !!user;
 };
 
 export const getUserByEmail = async (
   email: string,
-  select?: string,
-): Promise<UserType> => {
-  const user = await User.findOne({ email }).select(select ?? '');
-  if (!user) {
-    throw new Error('User not found');
-  }
-  return user.toObject();
-};
-
-export const deleteUser = async (userId: MongoIdSchemaType) => {
-  const user = await User.findByIdAndDelete({ _id: userId.id });
+): Promise<Prisma.UserGetPayload<{ include: { socialAccount: true } }>> => {
+  const user = await db.user.findUnique({
+    where: { email },
+    include: { socialAccount: true },
+  });
 
   if (!user) {
     throw new Error('User not found');
   }
+
+  return user;
 };
 
-export const getUsers = async (
-  userId: MongoIdSchemaType,
-  payload: GetUsersSchemaType,
-) => {
-  const { id } = userId;
-  const currentUser = await User.findById({ _id: id });
+export const deleteUser = async (userId: number) => {
+  const user = await db.user.delete({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+};
+
+export const getUsers = async (userId: number, payload: GetUsersSchemaType) => {
+  const currentUser = await db.user.findUnique({
+    where: { id: userId },
+  });
+
   if (!currentUser) {
     throw new Error('User must be logged in');
   }
 
-  const conditions: FilterQuery<IUserDocument> = {};
+  const where: Prisma.UserWhereInput = {};
 
   if (payload.searchString) {
-    conditions.$or = [
-      { firstName: { $regex: payload.searchString, $options: 'i' } },
-      { lastName: { $regex: payload.searchString, $options: 'i' } },
-      { email: { $regex: payload.searchString, $options: 'i' } },
+    where.OR = [
+      { name: { contains: String(payload.searchString), mode: 'insensitive' } },
+      {
+        email: { contains: String(payload.searchString), mode: 'insensitive' },
+      },
     ];
   }
 
-  if (payload.filterByRole) {
-    conditions.role = payload.filterByRole;
-  } else {
-    conditions.role = { $in: ['DEFAULT_USER'] };
-  }
-
-  const totalRecords = await User.countDocuments(conditions);
+  const totalRecords = await db.user.count({ where });
   const paginatorInfo = getPaginator(
-    payload.limitParam,
-    payload.pageParam,
+    Number(payload.limitParam),
+    Number(payload.pageParam),
     totalRecords,
   );
 
-  const results = await User.find(conditions)
-    .limit(paginatorInfo.limit)
-    .skip(paginatorInfo.skip)
-    .exec();
+  const results = await db.user.findMany({
+    where,
+    include: { socialAccount: true },
+    take: paginatorInfo.limit,
+    skip: paginatorInfo.skip,
+  });
 
   return {
     results,
@@ -101,13 +109,15 @@ export const getUsers = async (
 };
 
 export const createUser = async (
-  payload: UserModelType & { password: string },
+  payload: Prisma.UserCreateInput,
   checkExist: boolean = true,
-): Promise<UserType> => {
+): Promise<Prisma.UserGetPayload<{ include: { socialAccount: true } }>> => {
   if (checkExist) {
-    const isUserExist = await User.findOne({ email: payload.email });
+    const isUserExist = await db.user.findUnique({
+      where: { email: payload.email },
+    });
 
-    if (!isUserExist) {
+    if (isUserExist) {
       throw new Error('User already exists');
     }
   }
@@ -118,10 +128,13 @@ export const createUser = async (
 
   const hashedPassword = await hashPassword(payload.password);
 
-  const createdUser = await User.create({
-    ...payload,
-    password: hashedPassword,
+  const createdUser = await db.user.create({
+    data: {
+      ...payload,
+      password: hashedPassword,
+    },
+    include: { socialAccount: true },
   });
 
-  return { ...createdUser.toObject(), password: '', otp: null };
+  return { ...createdUser, password: '', otp: null };
 };

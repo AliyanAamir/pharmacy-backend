@@ -1,14 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { RoleType } from '../enums';
 import { getUserById } from '../modules/user/user.services';
 import { errorResponse } from '../utils/api.utils';
 import { JwtPayload } from '../utils/auth.utils';
+import { Role } from '@prisma/client';
 
 export type CanAccessByType = 'roles';
 
 export type CanAccessOptions = {
-  roles: RoleType | '*';
+  roles: Role | '*';
 };
 
 export const canAccess =
@@ -48,9 +48,7 @@ export const canAccess =
       const accessorsToScanFor = access;
 
       if (by === 'roles' && accessorsToScanFor) {
-        can = (accessorsToScanFor as RoleType[]).includes(
-          currentUser.role as RoleType,
-        );
+        can = (accessorsToScanFor as Role[]).includes(currentUser.role);
       }
 
       if (!accessorsToScanFor) {
@@ -80,7 +78,7 @@ export const canAccess =
       }
 
       if (currentUser) {
-        req['user'] = { ...currentUser, sub: currentUser._id };
+        req['user'] = { ...currentUser, sub: currentUser.id };
       }
     } catch (err) {
       return errorResponse(

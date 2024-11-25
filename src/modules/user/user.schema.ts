@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { passwordValidationSchema } from '../../common/common.schema';
-import { ROLE_ENUM, RoleType } from '../../enums';
 import { isValidUsername } from '../../utils/isUsername';
+import { Role } from '@prisma/client';
 
 export const baseCreateUser = z.object({
   email: z
@@ -12,6 +12,11 @@ export const baseCreateUser = z.object({
     .string({ required_error: 'Username is required' })
     .min(1)
     .refine((value) => isValidUsername(value), 'Username must be valid'),
+});
+
+export const loginUserSchema = z.object({
+  email: z.string().email({ message: 'Email is not valid' }),
+  password: passwordValidationSchema('Password'),
 });
 
 export const createUserSchema = z
@@ -38,7 +43,7 @@ export const getUsersSchema = z.object({
       'Input must be positive integer',
     )
     .transform(Number),
-  filterByRole: z.enum(Object.keys(ROLE_ENUM) as [RoleType]).optional(),
+  filterByRole: z.enum(Object.keys(Role) as [Role]).optional(),
 });
 
 export type CreateUserSchemaType = z.infer<typeof createUserSchema>;

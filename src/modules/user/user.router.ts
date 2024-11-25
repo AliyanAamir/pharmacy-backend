@@ -25,7 +25,7 @@ userRouter.get(
 userRouter.post(
   '/user',
   { requestType: { body: createUserSchema } },
-  canAccess('roles', ['SUPER_ADMIN']),
+  canAccess('roles', ['ADMIN']),
   handleCreateUser,
 );
 

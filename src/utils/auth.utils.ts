@@ -3,7 +3,7 @@ import { JsonWebTokenError, sign, verify } from 'jsonwebtoken';
 import config from '../config/config.service';
 import logger from '../lib/logger.service';
 import crypto from 'node:crypto';
-import { RoleType } from '../enums';
+import { Role } from '@prisma/client';
 
 export interface GoogleTokenResponse {
   access_token: string;
@@ -19,11 +19,11 @@ export interface GoogleTokensRequestParams {
 }
 
 export type JwtPayload = {
-  sub: string;
+  sub: number;
   email?: string | null;
   phoneNo?: string | null;
   username: string;
-  role: RoleType;
+  role: Role;
 };
 
 export type PasswordResetTokenPayload = {
@@ -96,10 +96,14 @@ export const generateRandomPassword = (length: number = 16): string => {
 export const fetchGoogleTokens = async (
   params: GoogleTokensRequestParams,
 ): Promise<GoogleTokenResponse> => {
-  if (!config.GOOGLE_CLIENT_ID || !config.GOOGLE_CLIENT_SECRET || !config.GOOGLE_REDIRECT_URI) {
+  if (
+    !config.GOOGLE_CLIENT_ID ||
+    !config.GOOGLE_CLIENT_SECRET ||
+    !config.GOOGLE_REDIRECT_URI
+  ) {
     throw new Error('Google credentials are not set');
   }
-  
+
   const url = 'https://oauth2.googleapis.com/token';
   const response = await fetch(url, {
     method: 'POST',

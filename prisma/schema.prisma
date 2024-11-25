@@ -6,33 +6,52 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("POSTGRES_URL")
 }
 
 // User Management
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  password  String
-  posts     Post[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               Int             @id @default(autoincrement())
+  email            String          @unique
+  username         String          @unique
+  name             String?
+  password         String
+  role             Role            @default(USER)
+  avatar           String?
+  phoneNo          String?
+  otp              String?
+  passwordResetCode String?
+  socialAccount    SocialAccount[]
 
-  @@unique([id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
   @@index([id])
 }
 
 // Blog Post
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@unique([id])
-  @@index([id])
+enum Role {
+  ADMIN
+  USER
+  MODERATOR
+}
+
+enum SocialAccountType {
+  GOOGLE
+  FACEBOOK
+  APPLE
+}
+
+model SocialAccount {
+  id          Int              @id @default(autoincrement())
+  accountType SocialAccountType
+  accessToken String
+  tokenExpiry DateTime
+  refreshToken String?
+  accountID   String
+  user        User             @relation(fields: [userId], references: [id])
+  userId      Int
+
+  @@index([userId])
 }

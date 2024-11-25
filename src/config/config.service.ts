@@ -7,8 +7,8 @@ dotenv.config();
 
 const configSchema = z.object({
   REDIS_URL: z.string().url(),
+  POSTGRES_URL: z.string().url(),
   PORT: z.string().regex(/^\d+$/).transform(Number),
-  MONGO_DATABASE_URL: z.string().url(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.string().regex(/^\d+$/).transform(Number).optional(),
   SMTP_USERNAME: z.string().email().optional(),
@@ -22,17 +22,29 @@ const configSchema = z.object({
   PASSWORD_RESET_TOKEN_EXPIRES_IN: z.string().min(1).transform(Number),
   SET_PASSWORD_TOKEN_EXPIRES_IN: z.string().min(1).transform(Number),
   STATIC_OTP: z.enum(['1', '0']).transform(Number).optional(),
-  NODE_ENV: z.union([z.literal('production'), z.literal('development')]).default('development').optional(),
-  SET_SESSION: z.string().transform((value) => !!Number(value)).optional(),
+  NODE_ENV: z
+    .union([z.literal('production'), z.literal('development')])
+    .default('development')
+    .optional(),
+  SET_SESSION: z
+    .string()
+    .transform((value) => !!Number(value))
+    .optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
   APP_NAME: z.string().default('API V1').optional(),
   APP_VERSION: z.string().default('1.0.0').optional(),
   // Mailgun configuration
-  MAILGUN_API_KEY: z.string().min(1),
-  MAILGUN_DOMAIN: z.string().min(1),
-  MAILGUN_FROM_EMAIL: z.string().email(),
+  // MAILGUN_API_KEY: z.string().min(1),
+  // MAILGUN_DOMAIN: z.string().min(1),
+  // MAILGUN_FROM_EMAIL: z.string().email(),
+
+  //Brevo configuration
+  BREVO_USER: z.string().min(1),
+  BREVO_HOST: z.string().min(1),
+  // BREVO_API_KEY: z.string().min(1),
+  BREVO_PASSWORD: z.string().min(1),
 });
 
 export type Config = z.infer<typeof configSchema>;
